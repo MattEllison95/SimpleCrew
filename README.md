@@ -37,7 +37,7 @@ A modern web application that provides a comprehensive financial dashboard inter
 
 ### Prerequisites
 - Docker and Docker Compose installed
-- API tokens (Bearer Token and Session Token)
+- API tokens (Bearer Token)
 
 ### Installation
 
@@ -52,8 +52,7 @@ A modern web application that provides a comprehensive financial dashboard inter
    Edit `docker-compose.yml` and replace the placeholder tokens:
    ```yaml
    environment:
-     - BEARER_TOKEN=your_actual_bearer_token
-     - SESSION_TOKEN=your_actual_session_token
+     - BEARER_TOKEN=your_actual_bearer_token (example: Bearer asfsdf3asdf23rfasdf2asdfa2)
    ```
 
 3. **Start the application**
@@ -75,7 +74,6 @@ A modern web application that provides a comprehensive financial dashboard inter
 2. **Set environment variables**
    ```bash
    export BEARER_TOKEN=your_bearer_token
-   export SESSION_TOKEN=your_session_token
    export DB_FILE=data/savings_data.db
    ```
 
@@ -96,7 +94,6 @@ A modern web application that provides a comprehensive financial dashboard inter
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `BEARER_TOKEN` | API authentication bearer token | Yes |
-| `SESSION_TOKEN` | API session token | Yes |
 | `DB_FILE` | SQLite database file path | No (defaults to `savings_data.db`) |
 
 ### API Configuration
@@ -229,7 +226,7 @@ docker-compose down
 ### Common Issues
 
 1. **Authentication Errors**
-   - Verify `BEARER_TOKEN` and `SESSION_TOKEN` are correctly set
+   - Verify `BEARER_TOKEN` is correctly set
    - Check token expiration and refresh if necessary
 
 2. **Database Issues**
