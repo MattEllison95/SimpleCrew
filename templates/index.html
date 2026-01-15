@@ -458,6 +458,14 @@
         .tx-group-date { font-size: 12px; color: #999; font-weight: 700; background: #FAFAFA; padding: 8px 15px; border-bottom: 1px solid #EEE; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 2; }
         .tx-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #FFF; border-bottom: 1px solid #F4F4F4; cursor: pointer; transition: background 0.1s; }
         .tx-row:hover { background: #F7FBFF; }
+        .tx-row.credit-card-tx { 
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.05) 0%, #FFF 20%);
+            border-left: 3px solid #667eea;
+            padding-left: 17px;
+        }
+        .tx-row.credit-card-tx:hover { 
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.1) 0%, #F7FBFF 20%);
+        }
         .tx-left { display: flex; flex-direction: column; gap: 4px; }
         .tx-title { font-weight: 600; font-size: 14px; color: var(--text-dark); }
         .tx-desc { font-size: 12px; color: #999; }
@@ -494,6 +502,19 @@
         .exp-item { padding: 20px 25px; border-bottom: 1px solid #EAEAEA; cursor: pointer; transition: background-color 0.15s; }
         .exp-item:last-child { border-bottom: none; }
         .exp-item:hover { background-color: #F9F9F9; }
+        
+        /* Credit card pocket styling */
+        .exp-item.credit-card-pocket {
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.03) 0%, transparent 100%);
+            border-left: 3px solid #667eea;
+            padding-left: 22px;
+        }
+        .exp-item.credit-card-pocket:hover {
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.06) 0%, rgba(249, 249, 249, 0.5) 100%);
+        }
+        .group-content .exp-item.credit-card-pocket {
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.05) 0%, rgba(250, 250, 250, 0.8) 100%);
+        }
         
         /* Dragging styles for items */
         .exp-item[draggable="true"] { cursor: grab; }
@@ -573,6 +594,97 @@
         /* UPDATE: Z-INDEX Increased to 2100 to beat Bottom Nav (1000) */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(3px); display: none; justify-content: center; align-items: center; z-index: 2100; }
         .modal-content { background: #FFF; width: 450px; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: none; overflow: hidden; animation: popIn 0.2s ease-out; max-width: 90vw; display: flex; flex-direction: column; max-height: 80vh;}
+        
+        /* Custom Dialog Styles */
+        .app-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(3px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .app-dialog-overlay.show {
+            display: flex;
+        }
+        .app-dialog {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: popIn 0.2s ease-out;
+            overflow: hidden;
+        }
+        .app-dialog-header {
+            padding: 24px 24px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .app-dialog-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin: 0;
+        }
+        .app-dialog-body {
+            padding: 24px;
+            color: var(--text-dark);
+            line-height: 1.6;
+            white-space: pre-line;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .app-dialog-footer {
+            padding: 16px 24px 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--border-color);
+        }
+        .app-dialog-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            min-width: 80px;
+        }
+        .app-dialog-button-primary {
+            background: var(--simple-blue);
+            color: white;
+        }
+        .app-dialog-button-primary:hover {
+            background: #0080d0;
+        }
+        .app-dialog-button-secondary {
+            background: white;
+            color: var(--text-dark);
+            border: 2px solid var(--border-color);
+        }
+        .app-dialog-button-secondary:hover {
+            border-color: var(--simple-blue);
+            color: var(--simple-blue);
+        }
+        .app-dialog-button-danger {
+            background: var(--alert-red);
+            color: white;
+        }
+        .app-dialog-button-danger:hover {
+            background: #c5221f;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
         /* Animation for Modals (Flex centered) */
         @keyframes popIn { 
             from { transform: scale(0.95); opacity: 0; } 
@@ -583,6 +695,10 @@
         @keyframes popInCenter { 
             from { transform: translateX(-50%) scale(0.95); opacity: 0; } 
             to { transform: translateX(-50%) scale(1); opacity: 1; } 
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .modal-header { padding: 15px 20px; background: #F8F9FB; border-bottom: 1px solid #EEE; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
@@ -1193,6 +1309,7 @@
             <a onclick="switchTab('goals')" id="nav-goals" class="nav-link">Pockets</a>
             <a onclick="switchTab('family')" id="nav-family" class="nav-link">Family</a>
             <a onclick="switchTab('cards')" id="nav-cards" class="nav-link">Cards</a>
+            <a onclick="switchTab('credit')" id="nav-credit" class="nav-link">Credit</a>
         </div>
 
         <div class="mobile-center-header" onclick="toggleMobileStats(event)">
@@ -1236,6 +1353,10 @@
         <div onclick="switchTab('cards')" id="mb-nav-cards" class="mobile-nav-link">
             <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
             <span>Cards</span>
+        </div>
+        <div onclick="switchTab('credit')" id="mb-nav-credit" class="mobile-nav-link">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+            <span>Credit</span>
         </div>
         
         <div onclick="openIntercom()" class="mobile-nav-link">
@@ -1315,6 +1436,206 @@
                 </div>
             </div>
 
+            <div id="view-credit" class="view-section">
+                <div class="section-header-row"><span class="tab-title">Credit Cards</span></div>
+                <div class="data-container" style="padding: 40px 20px;">
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <!-- Setup Screen (shown when no API key or not configured) -->
+                        <div id="credit-setup-screen">
+                            <div style="text-align: center; margin-bottom: 40px;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">💳</div>
+                                <h1 style="font-size: 32px; font-weight: 600; color: var(--text-dark); margin-bottom: 10px;">Set Up Credit Card Tracking</h1>
+                                <p style="font-size: 18px; color: var(--text-light); line-height: 1.6;">
+                                    Connect your credit card through LunchFlow to track transactions and stay in sync with Crew.
+                                </p>
+                            </div>
+
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 40px; margin-bottom: 40px; color: white;">
+                                <h2 style="font-size: 24px; font-weight: 600; margin-bottom: 20px;">How It Works</h2>
+                                <div style="line-height: 1.8; font-size: 16px;">
+                                    <p style="margin-bottom: 16px;">
+                                        When you connect your credit card through <a href="https://lunchflow.app" target="_blank" style="color: white; text-decoration: underline;">LunchFlow</a>, Crew automatically creates a <strong>"Credit Card" Pocket</strong> to keep your spending in sync.
+                                    </p>
+                                    <p style="margin-bottom: 16px;">
+                                        Money automatically moves from your <strong>Safe-to-Spend</strong> to your Credit Card Pocket whenever you make a purchase, ensuring you always have enough set aside to pay off your credit card balance.
+                                    </p>
+                                    <p>
+                                        This way, you can enjoy the benefits of credit cards—building credit history, earning points and cash back—without the worry of overspending.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- API Key Setup Instructions -->
+                            <div id="api-key-setup" style="background: #f8f9fa; border-radius: 12px; padding: 30px; margin-bottom: 30px; border: 2px dashed #ddd;">
+                                <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">Step 1: Configure LunchFlow API Key</h3>
+                                <ol style="line-height: 2; color: var(--text-light); padding-left: 20px;">
+                                    <li>Sign up for a <a href="https://lunchflow.app" target="_blank" style="color: var(--simple-blue);">LunchFlow account</a></li>
+                                    <li>Create an API destination in your LunchFlow dashboard</li>
+                                    <li>Copy your API key from the destination settings</li>
+                                    <li>Add it to your <code style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-family: monospace;">docker-compose.yml</code> file:</li>
+                                </ol>
+                                <div style="background: #2d2d2d; color: #f8f8f2; padding: 16px; border-radius: 8px; margin: 16px 0; font-family: monospace; font-size: 13px; overflow-x: auto;">
+                                    <div>environment:</div>
+                                    <div>&nbsp;&nbsp;- BEARER_TOKEN=...</div>
+                                    <div>&nbsp;&nbsp;- LUNCHFLOW_API_KEY=<span style="color: #ffd700;">YOUR_API_KEY_HERE</span></div>
+                                </div>
+                                <p style="color: var(--text-light); margin-top: 16px; font-size: 14px;">
+                                    Once you've added your API key, restart the Docker container and refresh this page.
+                                </p>
+                            </div>
+
+                            <!-- Account Selection (shown when API key is configured) -->
+                            <div id="account-selection" style="display: none;">
+                                <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">Step 2: Select Your Credit Card Account</h3>
+                                <p style="color: var(--text-light); margin-bottom: 20px;">
+                                    Select which account from your LunchFlow connections should be tracked as your credit card account:
+                                </p>
+                                <div id="accounts-list" style="margin-bottom: 20px;">
+                                    <div style="text-align: center; padding: 40px; color: #999;">
+                                        <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid var(--simple-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                                        Loading accounts...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Balance Sync Confirmation Modal (shown after account selection) -->
+                            <div id="balance-sync-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;">
+                                <div style="background: white; border-radius: 16px; padding: 40px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto;">
+                                    <h3 style="font-size: 24px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">Sync Balance?</h3>
+                                    <p style="color: var(--text-light); margin-bottom: 24px; line-height: 1.6;">
+                                        Would you like to sync the pocket balance to match your credit card's current balance?
+                                    </p>
+                                    <div id="balance-display" style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 24px; text-align: center;">
+                                        <div style="font-size: 14px; color: var(--text-light); margin-bottom: 8px;">Current Credit Card Balance</div>
+                                        <div id="balance-amount" style="font-size: 32px; font-weight: 700; color: var(--text-dark);">Loading...</div>
+                                    </div>
+                                    <div style="display: flex; gap: 12px;">
+                                        <button onclick="handleBalanceSync(false)" style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; background: white; border-radius: 8px; font-weight: 600; cursor: pointer; color: var(--text-dark);">Skip</button>
+                                        <button onclick="handleBalanceSync(true)" style="flex: 1; padding: 12px; border: none; background: var(--simple-blue); color: white; border-radius: 8px; font-weight: 600; cursor: pointer;">Sync Balance</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-top: 40px;">
+                                <div style="background: #f8f9fa; border-radius: 12px; padding: 24px;">
+                                    <div style="font-size: 32px; margin-bottom: 12px;">🔗</div>
+                                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-dark);">Connect Your Card</h3>
+                                    <p style="font-size: 14px; color: var(--text-light); line-height: 1.5;">
+                                        Connect your credit card through LunchFlow. Crew will securely sync your account information.
+                                    </p>
+                                </div>
+
+                                <div style="background: #f8f9fa; border-radius: 12px; padding: 24px;">
+                                    <div style="font-size: 32px; margin-bottom: 12px;">💰</div>
+                                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-dark);">Auto-Sync Pocket</h3>
+                                    <p style="font-size: 14px; color: var(--text-light); line-height: 1.5;">
+                                        A "Credit Card" Pocket is automatically created to reserve funds from your Safe-to-Spend for credit card payments.
+                                    </p>
+                                </div>
+
+                                <div style="background: #f8f9fa; border-radius: 12px; padding: 24px;">
+                                    <div style="font-size: 32px; margin-bottom: 12px;">✅</div>
+                                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-dark);">Stay in Sync</h3>
+                                    <p style="font-size: 14px; color: var(--text-light); line-height: 1.5;">
+                                        Every purchase automatically moves money to your Credit Card Pocket, keeping you aligned with your actual balance.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div style="border-top: 1px solid #e0e0e0; padding-top: 30px; margin-top: 40px; text-align: center;">
+                                <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">Benefits</h3>
+                                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; font-size: 14px; color: var(--text-light);">
+                                    <span>✓ Build credit history</span>
+                                    <span>✓ Earn points & rewards</span>
+                                    <span>✓ Never overspend</span>
+                                    <span>✓ Automatic balance tracking</span>
+                                </div>
+                            </div>
+
+                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; padding: 20px; margin-top: 40px;">
+                                <div style="font-weight: 600; margin-bottom: 8px; color: #856404;">💡 Note</div>
+                                <p style="color: #856404; line-height: 1.6; margin: 0; font-size: 14px;">
+                                    Once you have a valid API key configured (optional), this screen will change to show your connected accounts and allow you to select which account to track.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Management Interface (shown when fully configured) -->
+                        <div id="credit-management-screen" style="display: none;">
+                            <!-- Credit Card Pocket Display with Animation -->
+                            <div id="credit-card-pocket-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 40px; margin-bottom: 30px; color: white; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="position: relative; z-index: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+                                        <div>
+                                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">💳 Credit Card Pocket</div>
+                                            <div id="credit-pocket-name" style="font-size: 28px; font-weight: 700; margin-bottom: 4px;"></div>
+                                            <div style="font-size: 14px; opacity: 0.8;" id="credit-pocket-account"></div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">Balance</div>
+                                            <div id="credit-pocket-balance" style="font-size: 36px; font-weight: 700;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Management Actions -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px;">
+                                <button onclick="syncCreditBalance()" style="background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--simple-blue)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">🔄</div>
+                                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">Sync Balance</div>
+                                    <div style="font-size: 13px; color: var(--text-light);">Update pocket to match card balance</div>
+                                </button>
+                                <button onclick="changeCreditAccount()" style="background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--simple-blue)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">🔀</div>
+                                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">Change Account</div>
+                                    <div style="font-size: 13px; color: var(--text-light);">Select a different card</div>
+                                </button>
+                                <button onclick="stopCreditTracking()" style="background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='#dc3545'; this.style.boxShadow='0 4px 12px rgba(220,53,69,0.2)'" onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">⏹️</div>
+                                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">Stop Tracking</div>
+                                    <div style="font-size: 13px; color: var(--text-light);">Disconnect credit card</div>
+                                </button>
+                            </div>
+
+                            <!-- Account Info -->
+                            <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+                                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">Account Information</h3>
+                                <div style="display: grid; gap: 12px;">
+                                    <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
+                                        <span style="color: var(--text-light);">Account Name</span>
+                                        <span id="mgmt-account-name" style="font-weight: 600; color: var(--text-dark);"></span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
+                                        <span style="color: var(--text-light);">Account ID</span>
+                                        <span id="mgmt-account-id" style="font-family: monospace; font-size: 12px; color: var(--text-dark);"></span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                                        <span style="color: var(--text-light);">Connected</span>
+                                        <span id="mgmt-connected-date" style="color: var(--text-dark);"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- LunchFlow Sync Disclaimer -->
+                            <div style="background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                    <div style="font-size: 24px;">ℹ️</div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; margin-bottom: 8px; color: #1565c0;">Sync Schedule</div>
+                                        <p style="color: #1565c0; line-height: 1.6; margin: 0; font-size: 14px;">
+                                            LunchFlow syncs your credit card data once per day. Transactions and balance updates will appear automatically after LunchFlow completes its daily sync. We check for updates in the background, so your data will be current once LunchFlow has synced.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <div class="sidebar-column">
@@ -1386,13 +1707,18 @@
             if(tab === 'activity') {
                 searchContainer.style.opacity = '1'; searchContainer.style.visibility = 'visible'; filterBar.style.display = 'flex';
                 controlsBar.style.display = 'flex';
+                // Load transactions and start auto-refresh when activity tab is active
+                reloadTx();
+                startTransactionAutoRefresh();
             } else if (tab === 'goals') {
+                stopTransactionAutoRefresh();
                 searchContainer.style.opacity = '0'; searchContainer.style.visibility = 'hidden'; filterBar.style.display = 'none';
                 controlsBar.style.display = 'none'; // FIX: Hide Controls bar on mobile Pockets to avoid whitespace
             } else {
                 // Expenses, Family, Cards - Hide controls bar completely
                 searchContainer.style.opacity = '0'; searchContainer.style.visibility = 'hidden'; filterBar.style.display = 'none';
                 controlsBar.style.display = 'none';
+                stopTransactionAutoRefresh();
             }
             // This forces a refresh of the top header numbers every time you change tabs
             initBalances(true);
@@ -1404,6 +1730,12 @@
             
             if(tab === 'family') loadFamily();
             if(tab === 'cards') loadCards(true);
+            if(tab === 'credit') {
+                loadCreditSetup();
+            } else {
+                // Clean up credit card intervals when leaving credit page
+                cleanupCreditCardIntervals();
+            }
         }
 
         // --- CARDS LOGIC ---
@@ -1458,14 +1790,484 @@
                 container.innerHTML = html;
             });
         }
+
+        // --- CREDIT CARD SETUP LOGIC ---
+        function loadCreditSetup() {
+            // Check status first
+            fetch('/api/lunchflow/credit-card-status')
+                .then(res => res.json())
+                .then(status => {
+                    const apiKeySetup = document.getElementById('api-key-setup');
+                    const accountSelection = document.getElementById('account-selection');
+                    const setupScreen = document.getElementById('credit-setup-screen');
+                    const managementScreen = document.getElementById('credit-management-screen');
+                    const accountsList = document.getElementById('accounts-list');
+
+                    if (status.configured && status.pocketCreated) {
+                        // Fully configured - show management interface
+                        setupScreen.style.display = 'none';
+                        managementScreen.style.display = 'block';
+                        loadCreditManagement(status);
+                    } else if (status.configured && !status.pocketCreated) {
+                        // Account selected but pocket not created - show balance sync modal
+                        setupScreen.style.display = 'block';
+                        managementScreen.style.display = 'none';
+                        apiKeySetup.style.display = 'none';
+                        accountSelection.style.display = 'none';
+                        // Restore pending account info and show balance sync modal
+                        pendingAccountId = status.accountId;
+                        pendingAccountName = status.accountName;
+                        // Fetch balance and show sync modal
+                        fetch(`/api/lunchflow/get-balance/${status.accountId}`)
+                            .then(res => res.json())
+                            .then(balanceData => {
+                                if (balanceData.error) {
+                                    showBalanceSyncModal(null);
+                                } else {
+                                    const balanceAmount = balanceData.balance?.amount || 0;
+                                    // Balance is already in dollars, not cents
+                                    const balance = Math.abs(balanceAmount);
+                                    showBalanceSyncModal(balance);
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Error fetching balance:', err);
+                                showBalanceSyncModal(null);
+                            });
+                    } else if (status.hasApiKey) {
+                        // API key configured but no account selected - show account selection
+                        setupScreen.style.display = 'block';
+                        managementScreen.style.display = 'none';
+                        apiKeySetup.style.display = 'none';
+                        accountSelection.style.display = 'block';
+                        loadLunchFlowAccounts();
+                    } else {
+                        // No API key - show setup instructions
+                        setupScreen.style.display = 'block';
+                        managementScreen.style.display = 'none';
+                        apiKeySetup.style.display = 'block';
+                        accountSelection.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading credit card status:', err);
+                });
+        }
+
+        function loadLunchFlowAccounts() {
+            const accountsList = document.getElementById('accounts-list');
+            accountsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;"><div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid var(--simple-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>Loading accounts...</div>';
+
+            fetch('/api/lunchflow/accounts')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        accountsList.innerHTML = `<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; color: #721c24;">
+                            <strong>Error loading accounts:</strong> ${data.error}
+                        </div>`;
+                        return;
+                    }
+
+                    // LunchFlow API returns { accounts: [...], total: number }
+                    const accounts = data.accounts || [];
+
+                    if (accounts.length === 0) {
+                        accountsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No accounts found. Please connect an account in your LunchFlow dashboard first.</div>';
+                        return;
+                    }
+
+                    let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+                    accounts.forEach(account => {
+                        // Schema: id (number), name, institution_name, provider, status, currency, institution_logo
+                        const accountId = account.id;
+                        const accountName = account.name || 'Unknown Account';
+                        const institutionName = account.institution_name || '';
+                        const provider = account.provider || '';
+                        const status = account.status || 'ACTIVE';
+                        const currency = account.currency || '';
+                        const logo = account.institution_logo || null;
+                        
+                        // Filter to only show ACTIVE accounts, or show all with status badge
+                        const statusColor = status === 'ACTIVE' ? '#28a745' : status === 'ERROR' ? '#dc3545' : '#6c757d';
+                        
+                        html += `
+                            <div style="background: white; border: 2px solid ${status === 'ACTIVE' ? '#e0e0e0' : '#f0f0f0'}; border-radius: 8px; padding: 20px; cursor: ${status === 'ACTIVE' ? 'pointer' : 'not-allowed'}; transition: all 0.2s; opacity: ${status === 'ACTIVE' ? '1' : '0.7'};"
+                                 ${status === 'ACTIVE' ? `onclick="selectCreditCardAccount(${accountId}, '${accountName.replace(/'/g, "\\'")}')"` : ''}
+                                 ${status === 'ACTIVE' ? 'onmouseover="this.style.borderColor=\'var(--simple-blue)\'; this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'"' : ''}
+                                 ${status === 'ACTIVE' ? 'onmouseout="this.style.borderColor=\'#e0e0e0\'; this.style.boxShadow=\'none\'"' : ''}>
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                                    ${logo ? `<img src="${logo}" alt="${institutionName}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #f8f9fa; padding: 4px;">` : '<div style="width: 40px; height: 40px; background: #e9ecef; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🏦</div>'}
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">${accountName}</div>
+                                        <div style="font-size: 13px; color: var(--text-light); display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                            ${institutionName ? `<span>${institutionName}</span>` : ''}
+                                            ${provider ? `<span>• ${provider}</span>` : ''}
+                                            ${currency ? `<span>• ${currency}</span>` : ''}
+                                            <span style="background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${status}</span>
+                                        </div>
+                                    </div>
+                                    ${status === 'ACTIVE' ? '<div style="font-size: 24px; color: var(--simple-blue);">→</div>' : '<div style="font-size: 14px; color: #999;">Not available</div>'}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+
+                    accountsList.innerHTML = html;
+                })
+                .catch(err => {
+                    accountsList.innerHTML = `<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; color: #721c24;">
+                        <strong>Error:</strong> ${err.message}
+                    </div>`;
+                });
+        }
+
+        let pendingAccountId = null;
+        let pendingAccountName = null;
+
+        function selectCreditCardAccount(accountId, accountName) {
+            pendingAccountId = String(accountId);
+            pendingAccountName = accountName;
+            
+            // First, save the account selection
+            fetch('/api/lunchflow/set-credit-card', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    accountId: pendingAccountId,
+                    accountName: pendingAccountName
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    appAlert('Error saving account: ' + data.error, 'Error');
+                    return;
+                }
+                
+                // Fetch balance and show sync confirmation modal
+                fetch(`/api/lunchflow/get-balance/${pendingAccountId}`)
+                    .then(res => res.json())
+                    .then(balanceData => {
+                        if (balanceData.error) {
+                            // If balance fetch fails, still proceed but without balance display
+                            showBalanceSyncModal(null);
+                        } else {
+                            const balanceAmount = balanceData.balance?.amount || 0;
+                            // Balance is already in dollars, not cents
+                            const balance = Math.abs(balanceAmount);
+                            showBalanceSyncModal(balance);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error fetching balance:', err);
+                        showBalanceSyncModal(null);
+                    });
+            })
+            .catch(err => {
+                appAlert('Error: ' + err.message, 'Error');
+            });
+        }
+
+        function showBalanceSyncModal(balance) {
+            const modal = document.getElementById('balance-sync-modal');
+            const balanceAmount = document.getElementById('balance-amount');
+            
+            if (balance !== null) {
+                balanceAmount.textContent = fmt(balance);
+            } else {
+                balanceAmount.textContent = 'Unable to load';
+                balanceAmount.style.color = '#999';
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function handleBalanceSync(syncBalance) {
+            const modal = document.getElementById('balance-sync-modal');
+            modal.style.display = 'none';
+            
+            if (!pendingAccountId) {
+                appAlert('Error: No account selected', 'Error');
+                return;
+            }
+            
+            // Create pocket with or without balance sync
+            fetch('/api/lunchflow/create-pocket-with-balance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    accountId: pendingAccountId,
+                    syncBalance: syncBalance
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    appAlert('Error creating pocket: ' + data.error, 'Error');
+                    return;
+                }
+                
+                // Refresh Safe to Spend balance and goals/pockets list after pocket creation
+                if (typeof initBalances === 'function') {
+                    initBalances(true);
+                }
+                if (typeof loadGoals === 'function') {
+                    loadGoals(true);
+                }
+                
+                // Reload to show management interface
+                loadCreditSetup();
+                
+                // Clear pending values
+                pendingAccountId = null;
+                pendingAccountName = null;
+            })
+            .catch(err => {
+                appAlert('Error: ' + err.message, 'Error');
+            });
+        }
+
+        let creditCardRefreshInterval = null;
+
+        function loadCreditManagement(status) {
+            // Update account info
+            document.getElementById('mgmt-account-name').textContent = status.accountName || 'Unknown';
+            document.getElementById('mgmt-account-id').textContent = status.accountId || 'N/A';
+            
+            if (status.createdAt) {
+                const date = new Date(status.createdAt);
+                document.getElementById('mgmt-connected-date').textContent = date.toLocaleDateString();
+            } else {
+                document.getElementById('mgmt-connected-date').textContent = 'Unknown';
+            }
+            
+            // Clear any existing intervals
+            if (creditCardRefreshInterval) {
+                clearInterval(creditCardRefreshInterval);
+            }
+            
+            // Load pocket information immediately
+            refreshCreditCardBalance(status);
+            
+            // Set up periodic refresh every 30 seconds (silent background check)
+            creditCardRefreshInterval = setInterval(() => {
+                refreshCreditCardBalance(status);
+            }, 30000); // 30 seconds
+        }
+
+        function refreshCreditCardBalance(status) {
+            if (status.pocketId) {
+                // Fetch goals to get pocket data (force refresh to get latest balance)
+                fetch('/api/goals?refresh=true')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.goals) {
+                            const creditCardPocket = data.goals.find(g => g.id === status.pocketId);
+                            if (creditCardPocket) {
+                                document.getElementById('credit-pocket-name').textContent = creditCardPocket.name;
+                                document.getElementById('credit-pocket-balance').textContent = fmt(creditCardPocket.balance);
+                                document.getElementById('credit-pocket-account').textContent = `Tracking: ${status.accountName}`;
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error loading pocket data:', err));
+            }
+        }
+
+        // Clean up intervals when leaving credit page
+        function cleanupCreditCardIntervals() {
+            if (creditCardRefreshInterval) {
+                clearInterval(creditCardRefreshInterval);
+                creditCardRefreshInterval = null;
+            }
+            stopTransactionAutoRefresh();
+        }
+
+        function syncCreditBalance() {
+            fetch('/api/lunchflow/credit-card-status')
+                .then(res => res.json())
+                .then(status => {
+                    if (!status.accountId) {
+                        appAlert('No credit card account configured', 'Error');
+                        return;
+                    }
+                    
+                    // Get current balance to show in warning
+                    fetch(`/api/lunchflow/get-balance/${status.accountId}`)
+                        .then(res => res.json())
+                        .then(balanceData => {
+                            if (balanceData.error) {
+                                appAlert('Error fetching balance: ' + balanceData.error, 'Error');
+                                return;
+                            }
+                            
+                            const currentBalance = Math.abs(balanceData.balance?.amount || 0);
+                            const warningMessage = `⚠️ WARNING: This will sync your credit card pocket balance to match your current credit card balance.\n\n` +
+                                                  `Current Credit Card Balance: ${fmt(currentBalance)}\n\n` +
+                                                  `This will move money from Safe-to-Spend to the pocket (or vice versa) to match this amount.\n\n` +
+                                                  `Do you want to continue?`;
+                            
+                            appConfirm(warningMessage, 'Sync Balance', { confirmText: 'Continue' }).then(confirmed => {
+                                if (!confirmed) return;
+                                fetch('/api/lunchflow/sync-balance', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ accountId: status.accountId })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.error) {
+                                        appAlert('Error syncing balance: ' + data.error, 'Error');
+                                    } else {
+                                        appAlert(`✅ Balance synced successfully!\n\nPrevious: ${fmt(data.previousBalance)}\nNew: ${fmt(data.targetBalance)}`, 'Success');
+                                        loadCreditSetup(); // Reload to show updated balance
+                                        if (typeof loadGoals === 'function') loadGoals(true);
+                                        if (typeof initBalances === 'function') initBalances(true);
+                                    }
+                                })
+                                .catch(err => appAlert('Error: ' + err.message, 'Error'));
+                            });
+                        })
+                        .catch(err => {
+                            console.error('Error fetching balance:', err);
+                            // Still allow sync without showing balance
+                            appConfirm('⚠️ WARNING: This will sync your credit card pocket balance to match your current credit card balance. This will move money from Safe-to-Spend to the pocket (or vice versa).\n\nDo you want to continue?', 'Sync Balance', { confirmText: 'Continue' }).then(confirmed => {
+                                if (!confirmed) return;
+                                fetch('/api/lunchflow/sync-balance', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ accountId: status.accountId })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.error) {
+                                        appAlert('Error syncing balance: ' + data.error, 'Error');
+                                    } else {
+                                        appAlert(`✅ Balance synced successfully!\n\nPrevious: ${fmt(data.previousBalance)}\nNew: ${fmt(data.targetBalance)}`, 'Success');
+                                        loadCreditSetup();
+                                        if (typeof loadGoals === 'function') loadGoals(true);
+                                        if (typeof initBalances === 'function') initBalances(true);
+                                    }
+                                })
+                                .catch(err => appAlert('Error: ' + err.message, 'Error'));
+                            });
+                        });
+                });
+        }
+
+        function changeCreditAccount() {
+            const warningMessage = `⚠️ WARNING: Changing the credit card account will:\n\n` +
+                                  `1. DELETE the current credit card pocket\n` +
+                                  `2. Return all money from the pocket back to Safe-to-Spend\n` +
+                                  `3. Remove all transaction history for this account\n` +
+                                  `4. Require you to select a new account and create a new pocket\n\n` +
+                                  `Are you sure you want to change accounts?`;
+            
+            appConfirm(warningMessage, 'Change Account', { confirmText: 'Change Account', danger: true }).then(confirmed => {
+                if (!confirmed) return;
+                fetch('/api/lunchflow/change-account', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        appAlert('Error changing account: ' + data.error, 'Error');
+                    } else {
+                        // Clear any pending account state
+                        pendingAccountId = null;
+                        pendingAccountName = null;
+                        
+                        // Hide any visible balance sync modal
+                        const balanceSyncModal = document.getElementById('balance-sync-modal');
+                        if (balanceSyncModal) {
+                            balanceSyncModal.style.display = 'none';
+                        }
+                        
+                        appAlert('✅ Account changed successfully!\n\nThe pocket has been deleted and funds returned to Safe-to-Spend. Please select a new account.', 'Success');
+                        // Small delay to ensure backend state is committed before reloading
+                        setTimeout(() => {
+                            loadCreditSetup();
+                            if (typeof loadGoals === 'function') loadGoals(true);
+                            if (typeof initBalances === 'function') initBalances(true);
+                        }, 100);
+                    }
+                })
+                .catch(err => appAlert('Error: ' + err.message, 'Error'));
+            });
+        }
+
+        function stopCreditTracking() {
+            const warningMessage = `⚠️ WARNING: Stopping credit card tracking will:\n\n` +
+                                  `1. DELETE the credit card pocket permanently\n` +
+                                  `2. Return all money from the pocket back to Safe-to-Spend\n` +
+                                  `3. Remove all credit card transaction history\n` +
+                                  `4. Remove all credit card configuration\n\n` +
+                                  `You will need to set up credit card tracking again from scratch if you want to use it later.\n\n` +
+                                  `Are you absolutely sure you want to stop tracking?`;
+            
+            appConfirm(warningMessage, 'Stop Tracking', { confirmText: 'Stop Tracking', danger: true }).then(confirmed => {
+                if (!confirmed) return;
+                fetch('/api/lunchflow/stop-tracking', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        appAlert('Error stopping tracking: ' + data.error, 'Error');
+                    } else {
+                        appAlert('✅ Credit card tracking stopped.\n\nThe pocket has been deleted and funds returned to Safe-to-Spend.', 'Success');
+                        // Clean up intervals
+                        cleanupCreditCardIntervals();
+                        // Reload to show setup screen
+                        loadCreditSetup();
+                        if (typeof loadGoals === 'function') loadGoals(true);
+                        if (typeof initBalances === 'function') initBalances(true);
+                    }
+                })
+                .catch(err => appAlert('Error: ' + err.message, 'Error'));
+            });
+        }
+
         // --- FILTER & SEARCH ---
         let filterState = { q: '', minDate: '', maxDate: '', minAmt: '', maxAmt: '' };
+        let transactionRefreshInterval = null;
+        
         document.getElementById('search-input-box').addEventListener('input', (e) => { filterState.q = e.target.value; reloadTx(); });
         function triggerSearch() { filterState.q = document.getElementById('search-input-box').value; reloadTx(); }
         function toggleFilterMenu() { const menu = document.getElementById('filter-menu'); menu.style.display = menu.style.display === 'block' ? 'none' : 'block'; }
         function applyFilters() { filterState.minDate = document.getElementById('filter-min-date').value; filterState.maxDate = document.getElementById('filter-max-date').value; filterState.minAmt = document.getElementById('filter-min-amt').value; filterState.maxAmt = document.getElementById('filter-max-amt').value; updatePills(); reloadTx(); toggleFilterMenu(); }
         function updatePills() { const container = document.getElementById('active-filters'); container.innerHTML = ''; if (!filterState.minDate && !filterState.maxDate && !filterState.minAmt && !filterState.maxAmt) { container.innerHTML = `<div class="pill" onclick="removeFilter('date')">Last 6 months <span class="pill-remove">×</span></div>`; return; } if(filterState.minDate || filterState.maxDate) { container.innerHTML += `<div class="pill" onclick="removeFilter('date')">${filterState.minDate || '...'} to ${filterState.maxDate || '...'} <span class="pill-remove">×</span></div>`; } if(filterState.minAmt || filterState.maxAmt) { container.innerHTML += `<div class="pill" onclick="removeFilter('amt')">$${filterState.minAmt || '0'} - $${filterState.maxAmt || '∞'} <span class="pill-remove">×</span></div>`; } }
         function removeFilter(type) { if(type === 'date') { filterState.minDate = ''; filterState.maxDate = ''; document.getElementById('filter-min-date').value = ''; document.getElementById('filter-max-date').value = ''; } if(type === 'amt') { filterState.minAmt = ''; filterState.maxAmt = ''; document.getElementById('filter-min-amt').value = ''; document.getElementById('filter-max-amt').value = ''; } updatePills(); reloadTx(); }
+        
+        function startTransactionAutoRefresh() {
+            // Clear any existing interval
+            if (transactionRefreshInterval) {
+                clearInterval(transactionRefreshInterval);
+            }
+            // Refresh transactions every 30 seconds when activity tab is active
+            transactionRefreshInterval = setInterval(() => {
+                const activityTab = document.getElementById('view-activity');
+                if (activityTab && activityTab.classList.contains('active')) {
+                    reloadTx();
+                }
+            }, 30000); // 30 seconds
+        }
+        
+        function stopTransactionAutoRefresh() {
+            if (transactionRefreshInterval) {
+                clearInterval(transactionRefreshInterval);
+                transactionRefreshInterval = null;
+            }
+        }
         
         // --- DYNAMIC SEARCH FOR BILL IDENTIFICATION (REPLACED DATALIST) ---
         
@@ -1554,7 +2356,15 @@
                 let html = '';
                 for (const [date, txs] of Object.entries(grouped)) {
                     html += `<div class="tx-group-date">${date}</div>`;
-                    txs.forEach(tx => { const amtClass = tx.amount > 0 ? 'tx-pos' : 'tx-neg'; html += `<div class="tx-row" onclick="openTxDetail('${tx.id}')"><div class="tx-left"><span class="tx-title">${tx.title || 'Unknown'}</span>${tx.description ? `<span class="tx-desc">${tx.description}</span>` : ''}</div><div class="tx-amount ${amtClass}">${fmt(tx.amount)}</div></div>`; });
+                    txs.forEach(tx => { 
+                        const amtClass = tx.amount > 0 ? 'tx-pos' : 'tx-neg';
+                        const isCreditCard = tx.isCreditCard === true;
+                        const creditCardBadge = isCreditCard ? '<span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; margin-right: 8px; text-transform: uppercase;">💳 Credit</span>' : '';
+                        const pendingBadge = (isCreditCard && tx.isPending) ? '<span style="background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; margin-right: 8px;">Pending</span>' : '';
+                        const rowClass = isCreditCard ? 'tx-row credit-card-tx' : 'tx-row';
+                        const merchantInfo = isCreditCard && tx.merchant ? `<span class="tx-desc" style="color: #667eea; font-weight: 500;">${tx.merchant}</span>` : '';
+                        html += `<div class="${rowClass}" onclick="openTxDetail('${tx.id}')"><div class="tx-left">${creditCardBadge}${pendingBadge}<span class="tx-title">${tx.title || 'Unknown'}</span>${merchantInfo}${tx.description && !isCreditCard ? `<span class="tx-desc">${tx.description}</span>` : ''}</div><div class="tx-amount ${amtClass}">${fmt(tx.amount)}</div></div>`; 
+                    });
                 }
                 content.innerHTML = html;
             }).catch(err => { loader.style.display = 'none'; content.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">Offline / Cached Mode</div>'; });
@@ -1696,7 +2506,7 @@
                 selectElement.style.opacity = "1";
 
                 if (data.error) {
-                    alert("Failed to update: " + data.error);
+                    appAlert("Failed to update: " + data.error, "Error");
                     // Optional: Reload cards to reset the dropdown to the server state
                     loadCards(true); 
                 } else {
@@ -1711,7 +2521,7 @@
                 console.error("Error updating spend pocket", err);
                 selectElement.disabled = false;
                 selectElement.style.opacity = "1";
-                alert("Network error occurred.");
+                appAlert("Network error occurred.", "Error");
             });
         }
         
@@ -1738,9 +2548,13 @@
                     groups[g.id] = { id: g.id, name: g.name, pockets: [], totalBalance: 0, totalTarget: 0 };
                 });
 
-                data.goals.forEach((g, index) => {
-                    // Attach original index for onClick handlers
-                    g.originalIndex = index; 
+                // Filter out credit card pockets (they'll be shown on credit page)
+                const regularGoals = data.goals.filter(g => !g.isCreditCard);
+                
+                regularGoals.forEach((g, index) => {
+                    // Attach original index for onClick handlers (using original goals array for indexing)
+                    const originalIndex = data.goals.findIndex(goal => goal.id === g.id);
+                    g.originalIndex = originalIndex >= 0 ? originalIndex : index; 
                     
                     if (g.groupId && groups[g.groupId]) {
                         groups[g.groupId].pockets.push(g);
@@ -1823,8 +2637,12 @@
                 ? `<span>${fmt(g.balance)} of ${fmt(g.target)} saved</span>`
                 : `<span>${fmt(g.balance)} saved</span>`;
 
+            // Check if this is a credit card pocket
+            const isCreditCard = g.isCreditCard === true;
+            const creditCardIcon = isCreditCard ? '<span style="font-size: 18px; margin-right: 8px; vertical-align: middle;">💳</span>' : '';
+
             // ADDED: draggable="true", ondragstart, data-pocket-id, touch events
-            return `<div class="exp-item draggable-item" 
+            return `<div class="exp-item draggable-item ${isCreditCard ? 'credit-card-pocket' : ''}" 
                         draggable="true" 
                         ondragstart="drag(event)"
                         ontouchstart="handleTouchStart(event)"
@@ -1833,8 +2651,8 @@
                         data-pocket-id="${g.id}"
                         onclick="openGoalDetailList(${index})">
                         <div class="exp-header-line">
-                            <div class="exp-name">${g.name}</div>
-                            <span class="exp-funding-status ready">Active</span>
+                            <div class="exp-name">${creditCardIcon}${g.name}</div>
+                            <span class="exp-funding-status ready">${isCreditCard ? 'Credit Card' : 'Active'}</span>
                         </div>
                         ${progressHtml}
                         <div class="exp-details">${detailsText}</div>
@@ -2053,7 +2871,7 @@
             .then(data => {
                 if(!data.success) {
                     console.error("Failed to save order", data.error);
-                    alert("Could not save new order. Reloading...");
+                    appAlert("Could not save new order. Reloading...", "Error");
                     loadGoals(true); // Revert on failure
                 } else {
                     // Success - refresh to update group numbers
@@ -2164,7 +2982,7 @@
 
         function saveGroup(id) {
             const name = document.getElementById('mgmt-name-input').value;
-            if(!name) { alert("Please enter a group name"); return; }
+            if(!name) { appAlert("Please enter a group name", "Validation Error"); return; }
             
             // Get selected pockets
             const checkboxes = document.querySelectorAll('.ps-checkbox:checked');
@@ -2191,7 +3009,7 @@
                          renderMgmtList();
                     });
                 } else {
-                    alert("Error: " + data.error);
+                    appAlert("Error: " + data.error, "Error");
                     btn.disabled = false;
                     btn.innerText = "Save Group";
                 }
@@ -2199,23 +3017,25 @@
         }
 
         function deleteGroup(id) {
-            if(!confirm("Delete this group? Pockets inside will become ungrouped.")) return;
+            appConfirm("Delete this group? Pockets inside will become ungrouped.", "Delete Group", { confirmText: "Delete", danger: true }).then(confirmed => {
+                if (!confirmed) return;
             
-            fetch('/api/groups/delete', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: id })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    loadGoals(true);
-                    // Manually remove from local array to speed up UI
-                    allGroups = allGroups.filter(g => g.id !== id);
-                    renderMgmtList();
-                } else {
-                    alert("Error: " + data.error);
-                }
+                fetch('/api/groups/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        loadGoals(true);
+                        // Manually remove from local array to speed up UI
+                        allGroups = allGroups.filter(g => g.id !== id);
+                        renderMgmtList();
+                    } else {
+                        appAlert("Error: " + data.error, "Error");
+                    }
+                });
             });
         }
 
@@ -2230,7 +3050,10 @@
                 }
 
                 let html = '';
-                data.goals.forEach((g, index) => {
+                // Filter out credit card pockets from sidebar (they're shown on credit page)
+                const regularGoals = data.goals.filter(g => !g.isCreditCard);
+                
+                regularGoals.forEach((g, index) => {
                     let pct = g.target > 0 ? Math.min((g.balance / g.target) * 100, 100) : 0;
                     const hasGoal = g.target > 0;
                     
@@ -2324,39 +3147,39 @@
                 msg += `\n\nThis will remove the bill and stop future funding.`;
             }
 
-            if(!confirm(msg)) {
-                return;
-            }
+            appConfirm(msg, "Delete Expense", { confirmText: "Delete", danger: true }).then(confirmed => {
+                if (!confirmed) return;
 
-            const btn = document.querySelector('.btn-goal-delete');
-            if(btn) {
-                btn.innerText = "Deleting...";
-                btn.disabled = true;
-                btn.style.opacity = "0.7";
-            }
-
-            fetch('/api/delete-bill', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: id })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.error) {
-                    alert("Error: " + data.error);
-                    if(btn) {
-                        btn.innerText = "Delete Expense";
-                        btn.disabled = false;
-                        btn.style.opacity = "1";
-                    }
-                } else {
-                    closeModal();
-                    loadExpenses(true); 
+                const btn = document.querySelector('.btn-goal-delete');
+                if(btn) {
+                    btn.innerText = "Deleting...";
+                    btn.disabled = true;
+                    btn.style.opacity = "0.7";
                 }
-            })
-            .catch(err => {
-                alert("System error occurred.");
-                if(btn) btn.disabled = false;
+
+                fetch('/api/delete-bill', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.error) {
+                        appAlert("Error: " + data.error, "Error");
+                        if(btn) {
+                            btn.innerText = "Delete Expense";
+                            btn.disabled = false;
+                            btn.style.opacity = "1";
+                        }
+                    } else {
+                        closeModal();
+                        loadExpenses(true); 
+                    }
+                })
+                .catch(err => {
+                    appAlert("System error occurred.", "Error");
+                    if(btn) btn.disabled = false;
+                });
             });
         }
         
@@ -2426,42 +3249,42 @@
         // --- NEW DELETE FUNCTION ---
         function deletePocket(id, name) {
             // 1. Confirmation
-            if(!confirm(`Are you sure you want to delete the "${name}" pocket?\n\nThis will permanently remove the pocket history.`)) {
-                return;
-            }
+            appConfirm(`Are you sure you want to delete the "${name}" pocket?\n\nThis will permanently remove the pocket history.`, "Delete Pocket", { confirmText: "Delete", danger: true }).then(confirmed => {
+                if (!confirmed) return;
 
-            const btn = document.querySelector('.btn-goal-delete');
-            if(btn) {
-                btn.innerText = "Deleting...";
-                btn.disabled = true;
-                btn.style.opacity = "0.7";
-            }
-
-            // 2. Call Backend
-            fetch('/api/delete-pocket', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: id })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.error) {
-                    alert("Error deleting pocket: " + data.error);
-                    if(btn) {
-                        btn.innerText = "Delete Pocket";
-                        btn.disabled = false;
-                    }
-                } else {
-                    // 3. Success
-                    closeModal();
-                    // Force refresh lists
-                    loadGoals(true);
-                    loadSidebarPockets(true);
-                    initBalances(); // Refresh total balances
+                const btn = document.querySelector('.btn-goal-delete');
+                if(btn) {
+                    btn.innerText = "Deleting...";
+                    btn.disabled = true;
+                    btn.style.opacity = "0.7";
                 }
-            })
-            .catch(err => {
-                alert("System error occurred.");
+
+                // 2. Call Backend
+                fetch('/api/delete-pocket', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.error) {
+                        appAlert("Error deleting pocket: " + data.error, "Error");
+                        if(btn) {
+                            btn.innerText = "Delete Pocket";
+                            btn.disabled = false;
+                        }
+                    } else {
+                        // 3. Success
+                        closeModal();
+                        // Force refresh lists
+                        loadGoals(true);
+                        loadSidebarPockets(true);
+                        initBalances(); // Refresh total balances
+                    }
+                })
+                .catch(err => {
+                    appAlert("System error occurred.", "Error");
+                });
             });
         }
 
@@ -2904,5 +3727,115 @@ function savePocket() {
         initBalances(); reloadTx(); loadTrends(); loadSidebarPockets(true); loadUserProfile(); loadIntercom(); loadCards(true);
 
     </script>
-</body>
+    <!-- Custom App Dialog -->
+    <div id="app-dialog-overlay" class="app-dialog-overlay">
+        <div class="app-dialog">
+            <div class="app-dialog-header">
+                <h3 class="app-dialog-title" id="app-dialog-title">Alert</h3>
+            </div>
+            <div class="app-dialog-body" id="app-dialog-body"></div>
+            <div class="app-dialog-footer" id="app-dialog-footer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Custom Dialog Functions
+        let appDialogResolve = null;
+        
+        function showAppDialog(title, message, buttons) {
+            const overlay = document.getElementById('app-dialog-overlay');
+            const titleEl = document.getElementById('app-dialog-title');
+            const bodyEl = document.getElementById('app-dialog-body');
+            const footerEl = document.getElementById('app-dialog-footer');
+            
+            titleEl.textContent = title || 'Alert';
+            bodyEl.textContent = message || '';
+            footerEl.innerHTML = '';
+            
+            if (buttons && buttons.length > 0) {
+                buttons.forEach((btn, index) => {
+                    const button = document.createElement('button');
+                    button.className = `app-dialog-button ${btn.class || 'app-dialog-button-secondary'}`;
+                    button.textContent = btn.text || 'OK';
+                    button.onclick = (e) => {
+                        e.stopPropagation(); // Prevent bubbling to overlay
+                        // Resolve the promise first with the button's value
+                        const result = btn.value !== false;
+                        if (appDialogResolve) {
+                            appDialogResolve(result);
+                            appDialogResolve = null;
+                        }
+                        if (btn.onClick) btn.onClick();
+                        // Then hide the dialog
+                        hideAppDialog();
+                    };
+                    footerEl.appendChild(button);
+                });
+            } else {
+                // Default OK button
+                const button = document.createElement('button');
+                button.className = 'app-dialog-button app-dialog-button-primary';
+                button.textContent = 'OK';
+                button.onclick = (e) => {
+                    e.stopPropagation(); // Prevent bubbling to overlay
+                    // Resolve the promise first
+                    if (appDialogResolve) {
+                        appDialogResolve(true);
+                        appDialogResolve = null;
+                    }
+                    // Then hide the dialog
+                    hideAppDialog();
+                };
+                footerEl.appendChild(button);
+            }
+            
+            // Set up overlay click handler to close when clicking outside
+            overlay.onclick = function(e) {
+                if (e.target === overlay) {
+                    hideAppDialog();
+                }
+            };
+            
+            // Prevent clicks inside the dialog from closing it
+            const dialog = overlay.querySelector('.app-dialog');
+            dialog.onclick = function(e) {
+                e.stopPropagation();
+            };
+            
+            overlay.classList.add('show');
+            return new Promise(resolve => {
+                appDialogResolve = resolve;
+            });
+        }
+        
+        function hideAppDialog() {
+            const overlay = document.getElementById('app-dialog-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('show');
+            // Only resolve with false if we haven't already resolved (e.g., when clicking outside)
+            if (appDialogResolve) {
+                appDialogResolve(false);
+                appDialogResolve = null;
+            }
+        }
+        
+        // Replace browser alert() and confirm()
+        function appAlert(message, title = 'Alert') {
+            return showAppDialog(title, message, [
+                { text: 'OK', class: 'app-dialog-button-primary', value: true }
+            ]);
+        }
+        
+        function appConfirm(message, title = 'Confirm', options = {}) {
+            const confirmText = options.confirmText || 'OK';
+            const cancelText = options.cancelText || 'Cancel';
+            const confirmClass = options.danger ? 'app-dialog-button-danger' : 'app-dialog-button-primary';
+            
+            return showAppDialog(title, message, [
+                { text: cancelText, class: 'app-dialog-button-secondary', value: false },
+                { text: confirmText, class: confirmClass, value: true }
+            ]);
+        }
+    </script>
+    </body>
 </html>

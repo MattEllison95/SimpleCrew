@@ -9,3 +9,4 @@ services:
       - ./data:/app/data  # Saves your DB to a folder named 'data' next to this file
     environment:
       - BEARER_TOKEN= {BEARER ##############}
+      - LUNCHFLOW_API_KEY=${LUNCHFLOW_API_KEY}

@@ -3,6 +3,7 @@ import sqlite3
 import time
 import functools
 import os
+import threading
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, jsonify, request, send_from_directory
 
@@ -81,6 +82,34 @@ def init_db():
     except sqlite3.OperationalError:
         print("Migrating DB: Adding sort_order column...")
         c.execute("ALTER TABLE pocket_links ADD COLUMN sort_order INTEGER DEFAULT 0")
+    
+    # Store credit card account selection from LunchFlow
+    c.execute('''CREATE TABLE IF NOT EXISTS credit_card_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id TEXT UNIQUE NOT NULL,
+        account_name TEXT,
+        pocket_id TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Migration: Add pocket_id column if it doesn't exist
+    try:
+        c.execute("SELECT pocket_id FROM credit_card_config LIMIT 1")
+    except sqlite3.OperationalError:
+        print("Migrating DB: Adding pocket_id column to credit_card_config...")
+        c.execute("ALTER TABLE credit_card_config ADD COLUMN pocket_id TEXT")
+    
+    # Store seen credit card transactions to avoid duplicates
+    c.execute('''CREATE TABLE IF NOT EXISTS credit_card_transactions (
+        transaction_id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL,
+        amount REAL,
+        date TEXT,
+        merchant TEXT,
+        description TEXT,
+        is_pending INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )''')
 
     conn.commit()
     conn.close()
@@ -432,6 +461,10 @@ def get_goals_data():
         links_dict = {row[0]: row[1] for row in link_rows} 
         order_dict = {row[0]: row[2] for row in link_rows}
         
+        # Get credit card pocket IDs
+        c.execute("SELECT pocket_id FROM credit_card_config WHERE pocket_id IS NOT NULL")
+        credit_card_pocket_ids = {row[0] for row in c.fetchall()}
+        
         conn.close()
 
         goals = []
@@ -446,7 +479,10 @@ def get_goals_data():
                     g_id = links_dict.get(p_id)
                     g_name = groups_dict.get(g_id)
                     # Default sort order to 999 if not set, so new items appear at bottom
-                    s_order = order_dict.get(p_id, 999) 
+                    s_order = order_dict.get(p_id, 999)
+                    
+                    # Check if this is a credit card pocket
+                    is_credit_card = p_id in credit_card_pocket_ids
                     
                     goals.append({
                         "id": p_id, 
@@ -456,7 +492,8 @@ def get_goals_data():
                         "status": "Active",
                         "groupId": g_id,
                         "groupName": g_name,
-                        "sortOrder": s_order
+                        "sortOrder": s_order,
+                        "isCreditCard": is_credit_card
                     })
         
         # Python-side sort based on the DB order
@@ -1175,7 +1212,61 @@ def api_transactions():
     max_date = request.args.get('maxDate')
     min_amt = request.args.get('minAmt')
     max_amt = request.args.get('maxAmt')
-    return jsonify(get_transactions_data(q, min_date, max_date, min_amt, max_amt))
+    
+    # Get regular transactions
+    result = get_transactions_data(q, min_date, max_date, min_amt, max_amt)
+    
+    # Get credit card transactions
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("""SELECT transaction_id, amount, date, merchant, description, is_pending, created_at
+                     FROM credit_card_transactions
+                     ORDER BY date DESC, created_at DESC""")
+        rows = c.fetchall()
+        conn.close()
+        
+        credit_card_txs = []
+        for row in rows:
+            tx_date = row[2]  # date field
+            amount = row[1]  # amount (already in dollars)
+            
+            # Apply filters if provided
+            if min_date and tx_date < min_date:
+                continue
+            if max_date and tx_date > max_date:
+                continue
+            if min_amt and abs(amount) < float(min_amt):
+                continue
+            if max_amt and abs(amount) > float(max_amt):
+                continue
+            if q and q.lower() not in (row[3] or "").lower() and q.lower() not in (row[4] or "").lower():
+                continue
+            
+            # Format as Crew transaction format
+            credit_card_txs.append({
+                "id": f"cc_{row[0]}",  # Prefix to avoid conflicts
+                "title": row[3] or row[4] or "Credit Card Transaction",
+                "description": row[4] or "",
+                "amount": -abs(amount),  # Negative for expenses
+                "date": tx_date,
+                "type": "DEBIT",
+                "subaccountId": None,
+                "isCreditCard": True,
+                "merchant": row[3],
+                "isPending": bool(row[5])
+            })
+        
+        # Merge and sort by date
+        if "transactions" in result:
+            all_txs = result["transactions"] + credit_card_txs
+            all_txs.sort(key=lambda x: x.get("date", ""), reverse=True)
+            result["transactions"] = all_txs
+    
+    except Exception as e:
+        print(f"Error loading credit card transactions: {e}")
+    
+    return jsonify(result)
 @app.route('/api/transaction/<path:tx_id>')
 def api_transaction_detail(tx_id): return jsonify(get_transaction_detail(tx_id))
 
@@ -1265,7 +1356,607 @@ def api_user():
 def api_intercom():
     return jsonify(get_intercom_data())
 
+# --- LUNCHFLOW API ENDPOINTS ---
+@app.route('/api/lunchflow/accounts')
+def api_lunchflow_accounts():
+    """List all accounts from LunchFlow"""
+    api_key = os.environ.get("LUNCHFLOW_API_KEY")
+    if not api_key:
+        return jsonify({"error": "LunchFlow API key not configured. Please set LUNCHFLOW_API_KEY in docker-compose.yml"}), 400
+    
+    try:
+        headers = {
+            "x-api-key": api_key,
+            "accept": "application/json"
+        }
+        # Use www.lunchflow.app as per documentation
+        response = requests.get("https://www.lunchflow.app/api/v1/accounts", headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            return jsonify({"error": f"LunchFlow API error: {response.status_code} - {response.text}"}), response.status_code
+        
+        data = response.json()
+        # Return the data in the expected format with accounts array
+        return jsonify(data)
+    except requests.exceptions.ConnectionError as e:
+        return jsonify({"error": f"Connection error: Unable to connect to LunchFlow API. Please check your internet connection and try again. ({str(e)})"}), 500
+    except requests.exceptions.Timeout as e:
+        return jsonify({"error": f"Request timeout: LunchFlow API took too long to respond. ({str(e)})"}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Request error: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+@app.route('/api/lunchflow/set-credit-card', methods=['POST'])
+def api_set_credit_card():
+    """Store the selected credit card account ID (without creating pocket yet)"""
+    data = request.json
+    account_id = data.get('accountId')
+    account_name = data.get('accountName', '')
+    
+    if not account_id:
+        return jsonify({"error": "accountId is required"}), 400
+    
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Store the account info without pocket_id yet (pocket will be created after balance sync decision)
+        c.execute("INSERT OR REPLACE INTO credit_card_config (account_id, account_name, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                  (account_id, account_name))
+        conn.commit()
+        conn.close()
+        
+        cache.clear()
+        return jsonify({"success": True, "message": "Credit card account saved", "needsBalanceSync": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lunchflow/get-balance/<account_id>')
+def api_get_balance(account_id):
+    """Get the balance for a specific LunchFlow account"""
+    api_key = os.environ.get("LUNCHFLOW_API_KEY")
+    if not api_key:
+        return jsonify({"error": "LunchFlow API key not configured"}), 400
+    
+    try:
+        headers = {
+            "x-api-key": api_key,
+            "accept": "application/json"
+        }
+        response = requests.get(f"https://www.lunchflow.app/api/v1/accounts/{account_id}/balance", headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            return jsonify({"error": f"LunchFlow API error: {response.status_code} - {response.text}"}), response.status_code
+        
+        data = response.json()
+        return jsonify(data)
+    except requests.exceptions.ConnectionError as e:
+        return jsonify({"error": f"Connection error: {str(e)}"}), 500
+    except requests.exceptions.Timeout as e:
+        return jsonify({"error": f"Request timeout: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lunchflow/create-pocket-with-balance', methods=['POST'])
+def api_create_pocket_with_balance():
+    """Create the credit card pocket and optionally sync balance"""
+    data = request.json
+    account_id = data.get('accountId')
+    sync_balance = data.get('syncBalance', False)
+    
+    if not account_id:
+        return jsonify({"error": "accountId is required"}), 400
+    
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get account name
+        c.execute("SELECT account_name FROM credit_card_config WHERE account_id = ?", (account_id,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "Account not found. Please select an account first."}), 400
+        
+        account_name = row[0]
+        
+        # Get current balance from LunchFlow if sync requested
+        initial_amount = "0"
+        if sync_balance:
+            api_key = os.environ.get("LUNCHFLOW_API_KEY")
+            if api_key:
+                try:
+                    headers = {"x-api-key": api_key, "accept": "application/json"}
+                    response = requests.get(f"https://www.lunchflow.app/api/v1/accounts/{account_id}/balance", headers=headers, timeout=30)
+                    if response.status_code == 200:
+                        balance_data = response.json()
+                        # Balance is already in dollars
+                        balance_amount = balance_data.get("balance", {}).get("amount", 0)
+                        initial_amount = str(abs(balance_amount))  # Use absolute value
+                except Exception as e:
+                    print(f"Warning: Could not fetch balance: {e}")
+        
+        # Create the pocket
+        pocket_name = f"Credit Card - {account_name}"
+        pocket_result = create_pocket(pocket_name, "0", initial_amount, f"Credit card tracking pocket for {account_name}")
+        
+        if "error" in pocket_result:
+            conn.close()
+            return jsonify({"error": f"Failed to create pocket: {pocket_result['error']}"}), 500
+        
+        pocket_id = pocket_result.get("result", {}).get("id")
+        if not pocket_id:
+            conn.close()
+            return jsonify({"error": "Pocket was created but no ID was returned"}), 500
+        
+        # Update the config with pocket_id
+        c.execute("UPDATE credit_card_config SET pocket_id = ? WHERE account_id = ?", (pocket_id, account_id))
+        conn.commit()
+        conn.close()
+        
+        cache.clear()
+        return jsonify({"success": True, "message": "Credit card pocket created", "pocketId": pocket_id, "syncedBalance": sync_balance})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lunchflow/credit-card-status')
+def api_credit_card_status():
+    """Get the current credit card account configuration"""
+    api_key = os.environ.get("LUNCHFLOW_API_KEY")
+    
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT account_id, account_name, pocket_id, created_at FROM credit_card_config LIMIT 1")
+        row = c.fetchone()
+        conn.close()
+        
+        result = {
+            "hasApiKey": bool(api_key),
+            "configured": False,
+            "pocketCreated": False,
+            "accountId": None,
+            "accountName": None,
+            "pocketId": None,
+            "createdAt": None
+        }
+        
+        if row:
+            result["configured"] = True
+            result["accountId"] = row[0]
+            result["accountName"] = row[1]
+            result["pocketId"] = row[2]
+            result["pocketCreated"] = bool(row[2])
+            result["createdAt"] = row[3]
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lunchflow/sync-balance', methods=['POST'])
+def api_sync_balance():
+    """Sync the pocket balance to match the credit card balance"""
+    data = request.json
+    account_id = data.get('accountId')
+    
+    if not account_id:
+        return jsonify({"error": "accountId is required"}), 400
+    
+    try:
+        # Get pocket_id from database
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT pocket_id FROM credit_card_config WHERE account_id = ?", (account_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if not row or not row[0]:
+            return jsonify({"error": "No pocket found for this account"}), 400
+        
+        pocket_id = row[0]
+        
+        # Get balance from LunchFlow
+        api_key = os.environ.get("LUNCHFLOW_API_KEY")
+        if not api_key:
+            return jsonify({"error": "LunchFlow API key not configured"}), 400
+        
+        headers = {"x-api-key": api_key, "accept": "application/json"}
+        response = requests.get(f"https://www.lunchflow.app/api/v1/accounts/{account_id}/balance", headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            return jsonify({"error": f"Failed to get balance: {response.status_code}"}), response.status_code
+        
+        balance_data = response.json()
+        # Balance is already in dollars
+        balance_amount = balance_data.get("balance", {}).get("amount", 0)
+        target_balance = abs(balance_amount)
+        
+        # Get current pocket balance
+        headers_crew = get_crew_headers()
+        if not headers_crew:
+            return jsonify({"error": "Crew credentials not found"}), 400
+        
+        query_string = """query GetSubaccount($id: ID!) { node(id: $id) { ... on Subaccount { id overallBalance } } }"""
+        response_crew = requests.post(URL, headers=headers_crew, json={
+            "operationName": "GetSubaccount",
+            "variables": {"id": pocket_id},
+            "query": query_string
+        })
+        
+        crew_data = response_crew.json()
+        current_balance = 0
+        try:
+            current_balance = crew_data.get("data", {}).get("node", {}).get("overallBalance", 0) / 100.0
+        except:
+            pass
+        
+        # Calculate difference
+        difference = target_balance - current_balance
+        
+        # Get Checking subaccount ID (not Account ID)
+        all_subs = get_subaccounts_list()
+        if "error" in all_subs:
+            return jsonify({"error": "Could not get subaccounts list"}), 400
+        
+        checking_subaccount_id = None
+        for sub in all_subs.get("subaccounts", []):
+            if sub["name"] == "Checking":
+                checking_subaccount_id = sub["id"]
+                break
+        
+        if not checking_subaccount_id:
+            return jsonify({"error": "Could not find Checking subaccount"}), 400
+        
+        # Transfer money to/from pocket
+        if abs(difference) > 0.01:  # Only transfer if difference is significant
+            if difference > 0:
+                # Need to move money from Checking to Pocket
+                result = move_money(checking_subaccount_id, pocket_id, str(difference), f"Sync credit card balance")
+            else:
+                # Need to move money from Pocket to Checking
+                result = move_money(pocket_id, checking_subaccount_id, str(abs(difference)), f"Sync credit card balance")
+            
+            if "error" in result:
+                return jsonify({"error": f"Failed to sync balance: {result['error']}"}), 500
+        
+        cache.clear()
+        return jsonify({"success": True, "message": "Balance synced", "targetBalance": target_balance, "previousBalance": current_balance})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lunchflow/change-account', methods=['POST'])
+def api_change_account():
+    """Delete the credit card pocket, return money to safe-to-spend, and clear config"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get current config - find any configured account with a pocket
+        c.execute("SELECT account_id, pocket_id FROM credit_card_config WHERE pocket_id IS NOT NULL LIMIT 1")
+        row = c.fetchone()
+        
+        if not row:
+            # Check if there's any config at all (even without pocket)
+            c.execute("SELECT account_id, pocket_id FROM credit_card_config LIMIT 1")
+            row = c.fetchone()
+            if not row:
+                conn.close()
+                return jsonify({"error": "No credit card account configured"}), 400
+            # Get account_id even if pocket_id is NULL
+            account_id = row[0]
+            pocket_id = row[1] if len(row) > 1 else None
+        else:
+            account_id, pocket_id = row[0], row[1]
+        
+        # Get current pocket balance and return it to Checking
+        headers_crew = get_crew_headers()
+        if headers_crew and pocket_id:
+            try:
+                query_string = """query GetSubaccount($id: ID!) { node(id: $id) { ... on Subaccount { id overallBalance } } }"""
+                response_crew = requests.post(URL, headers=headers_crew, json={
+                    "operationName": "GetSubaccount",
+                    "variables": {"id": pocket_id},
+                    "query": query_string
+                })
+                
+                crew_data = response_crew.json()
+                current_balance = 0
+                try:
+                    current_balance = crew_data.get("data", {}).get("node", {}).get("overallBalance", 0) / 100.0
+                except:
+                    pass
+                
+                # Return money to Checking if there's a balance
+                all_subs = get_subaccounts_list()
+                if "error" not in all_subs:
+                    checking_subaccount_id = None
+                    for sub in all_subs.get("subaccounts", []):
+                        if sub["name"] == "Checking":
+                            checking_subaccount_id = sub["id"]
+                            break
+                    
+                    if checking_subaccount_id and current_balance > 0.01:
+                        move_money(pocket_id, checking_subaccount_id, str(current_balance), "Returning credit card pocket funds to Safe-to-Spend")
+                
+                # Delete the pocket
+                delete_subaccount_action(pocket_id)
+            except Exception as e:
+                print(f"Warning: Error deleting pocket: {e}")
+        
+        # Delete ALL config rows for this account and transaction history (user will select a new account)
+        # Delete all rows regardless of pocket_id status to ensure clean state
+        c.execute("DELETE FROM credit_card_config WHERE account_id = ?", (account_id,))
+        c.execute("DELETE FROM credit_card_transactions WHERE account_id = ?", (account_id,))
+        conn.commit()
+        conn.close()
+        
+        cache.clear()
+        return jsonify({"success": True, "message": "Account changed. Pocket deleted and funds returned to Safe-to-Spend."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lunchflow/stop-tracking', methods=['POST'])
+def api_stop_tracking():
+    """Delete the credit card pocket, return money to safe-to-spend, and delete all config"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get current config
+        c.execute("SELECT account_id, pocket_id FROM credit_card_config WHERE pocket_id IS NOT NULL LIMIT 1")
+        row = c.fetchone()
+        
+        if not row:
+            conn.close()
+            return jsonify({"error": "No credit card account configured"}), 400
+        
+        account_id, pocket_id = row[0], row[1]
+        
+        # Get current pocket balance and return it to Checking
+        headers_crew = get_crew_headers()
+        if headers_crew and pocket_id:
+            try:
+                query_string = """query GetSubaccount($id: ID!) { node(id: $id) { ... on Subaccount { id overallBalance } } }"""
+                response_crew = requests.post(URL, headers=headers_crew, json={
+                    "operationName": "GetSubaccount",
+                    "variables": {"id": pocket_id},
+                    "query": query_string
+                })
+                
+                crew_data = response_crew.json()
+                current_balance = 0
+                try:
+                    current_balance = crew_data.get("data", {}).get("node", {}).get("overallBalance", 0) / 100.0
+                except:
+                    pass
+                
+                # Return money to Checking if there's a balance
+                all_subs = get_subaccounts_list()
+                if "error" not in all_subs:
+                    checking_subaccount_id = None
+                    for sub in all_subs.get("subaccounts", []):
+                        if sub["name"] == "Checking":
+                            checking_subaccount_id = sub["id"]
+                            break
+                    
+                    if checking_subaccount_id and current_balance > 0.01:
+                        move_money(pocket_id, checking_subaccount_id, str(current_balance), "Returning credit card pocket funds to Safe-to-Spend")
+                
+                # Delete the pocket
+                delete_subaccount_action(pocket_id)
+            except Exception as e:
+                print(f"Warning: Error deleting pocket: {e}")
+        
+        # Delete all credit card config and transactions
+        c.execute("DELETE FROM credit_card_config WHERE account_id = ?", (account_id,))
+        c.execute("DELETE FROM credit_card_transactions WHERE account_id = ?", (account_id,))
+        conn.commit()
+        conn.close()
+        
+        cache.clear()
+        return jsonify({"success": True, "message": "Tracking stopped. Pocket deleted and funds returned to Safe-to-Spend."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- CREDIT CARD TRANSACTION SYNCING ---
+def check_credit_card_transactions():
+    """Check for new credit card transactions and update balance"""
+    try:
+        api_key = os.environ.get("LUNCHFLOW_API_KEY")
+        if not api_key:
+            return
+        
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get credit card account config
+        c.execute("SELECT account_id, pocket_id FROM credit_card_config WHERE pocket_id IS NOT NULL LIMIT 1")
+        row = c.fetchone()
+        
+        if not row:
+            conn.close()
+            return
+        
+        account_id, pocket_id = row
+        
+        # Get when credit card was added (only get transactions after this date)
+        c.execute("SELECT created_at FROM credit_card_config WHERE account_id = ?", (account_id,))
+        config_row = c.fetchone()
+        added_date = config_row[0] if config_row else None
+        
+        # Fetch transactions from LunchFlow
+        headers = {"x-api-key": api_key, "accept": "application/json"}
+        # Try both URL formats
+        try:
+            response = requests.get(f"https://www.lunchflow.app/api/v1/accounts/{account_id}/transactions", headers=headers, timeout=30)
+        except:
+            response = requests.get(f"https://lunchflow.com/api/v1/accounts/{account_id}/transactions", headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            conn.close()
+            return
+        
+        data = response.json()
+        transactions = data.get("transactions", [])
+        
+        # Get list of already seen transaction IDs
+        c.execute("SELECT transaction_id FROM credit_card_transactions WHERE account_id = ?", (account_id,))
+        seen_ids = {row[0] for row in c.fetchall()}
+        
+        # TESTING MODE: Allow all past transactions (not just those after credit card was added)
+        # TODO: Revert this for production - uncomment the date filter below
+        # Filter transactions to only include those after credit card was added
+        # if added_date:
+        #     try:
+        #         added_datetime = datetime.fromisoformat(added_date.replace('Z', '+00:00'))
+        #         transactions = [tx for tx in transactions if tx.get("date") and datetime.fromisoformat(tx["date"].replace('Z', '+00:00')) >= added_datetime]
+        #     except:
+        #         pass  # If date parsing fails, include all transactions
+        
+        new_transactions = []
+        total_amount = 0.0
+        
+        for tx in transactions:
+            tx_id = tx.get("id")
+            if not tx_id or tx_id in seen_ids:
+                continue
+            
+            # Store new transaction
+            amount = tx.get("amount", 0)  # LunchFlow already returns dollars, not cents
+            total_amount += amount
+            
+            # Use INSERT OR IGNORE to prevent duplicates at database level (safety net)
+            c.execute("""INSERT OR IGNORE INTO credit_card_transactions 
+                         (transaction_id, account_id, amount, date, merchant, description, is_pending)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                     (tx_id, account_id, amount, tx.get("date"), tx.get("merchant"), 
+                      tx.get("description"), 1 if tx.get("isPending") else 0))
+            
+            # Only add to new_transactions if the row was actually inserted
+            if c.rowcount > 0:
+                new_transactions.append(tx)
+        
+        conn.commit()
+        
+        # Always update the pocket balance (every 30 seconds), not just when there are new transactions
+        if pocket_id:
+            # Get current balance from LunchFlow
+            balance_headers = {"x-api-key": api_key, "accept": "application/json"}
+            balance_response = requests.get(f"https://www.lunchflow.app/api/v1/accounts/{account_id}/balance", headers=balance_headers, timeout=30)
+            if balance_response.status_code == 200:
+                balance_data = balance_response.json()
+                # Balance is already in dollars
+                balance_amount = balance_data.get("balance", {}).get("amount", 0)
+                target_balance = abs(balance_amount)
+                
+                # Get current pocket balance
+                headers_crew = get_crew_headers()
+                if headers_crew:
+                    query_string = """query GetSubaccount($id: ID!) { node(id: $id) { ... on Subaccount { id overallBalance } } }"""
+                    response_crew = requests.post(URL, headers=headers_crew, json={
+                        "operationName": "GetSubaccount",
+                        "variables": {"id": pocket_id},
+                        "query": query_string
+                    })
+                    
+                    crew_data = response_crew.json()
+                    current_balance = 0
+                    try:
+                        current_balance = crew_data.get("data", {}).get("node", {}).get("overallBalance", 0) / 100.0
+                    except:
+                        pass
+                    
+                    # Calculate difference and move money
+                    difference = target_balance - current_balance
+                    all_subs = get_subaccounts_list()
+                    if "error" not in all_subs:
+                        checking_subaccount_id = None
+                        for sub in all_subs.get("subaccounts", []):
+                            if sub["name"] == "Checking":
+                                checking_subaccount_id = sub["id"]
+                                break
+                        
+                        if checking_subaccount_id and abs(difference) > 0.01:
+                            if difference > 0:
+                                move_money(checking_subaccount_id, pocket_id, str(difference), f"Credit card transaction sync")
+                            else:
+                                move_money(pocket_id, checking_subaccount_id, str(abs(difference)), f"Credit card transaction sync")
+                    
+                    cache.clear()
+        
+        conn.close()
+        
+        if new_transactions:
+            print(f"✅ Found {len(new_transactions)} new credit card transactions")
+        else:
+            print(f"🔄 Credit card balance checked (no new transactions)")
+        
+    except Exception as e:
+        print(f"Error checking credit card transactions: {e}")
+
+@app.route('/api/lunchflow/last-check-time')
+def api_last_check_time():
+    """Get the last time credit card transactions were checked"""
+    try:
+        # Store last check time in a simple way - we'll use a file or just return current time minus some offset
+        # For now, return a timestamp that represents "30 seconds ago" so countdown starts at 30
+        import time as time_module
+        return jsonify({
+            "lastCheckTime": time_module.time(),
+            "checkInterval": 30  # seconds
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def background_transaction_checker():
+    """Background thread that checks for new transactions every 30 seconds"""
+    while True:
+        try:
+            check_credit_card_transactions()
+        except Exception as e:
+            print(f"Error in background transaction checker: {e}")
+        time.sleep(30)  # Check every 30 seconds
+
+@app.route('/api/lunchflow/transactions')
+def api_get_credit_card_transactions():
+    """Get credit card transactions that have been synced"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        c.execute("""SELECT transaction_id, amount, date, merchant, description, is_pending, created_at
+                     FROM credit_card_transactions
+                     ORDER BY date DESC, created_at DESC
+                     LIMIT 100""")
+        
+        rows = c.fetchall()
+        conn.close()
+        
+        transactions = []
+        for row in rows:
+            transactions.append({
+                "id": row[0],
+                "amount": row[1],
+                "date": row[2],
+                "merchant": row[3],
+                "description": row[4],
+                "isPending": bool(row[5]),
+                "syncedAt": row[6],
+                "isCreditCard": True  # Flag to identify credit card transactions
+            })
+        
+        return jsonify({"transactions": transactions})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     init_db()
+    
+    # Start background thread for transaction checking
+    transaction_thread = threading.Thread(target=background_transaction_checker, daemon=True)
+    transaction_thread.start()
+    print("🔄 Credit card transaction checker started (checks every 30 seconds)")
+    
     print("Server running on http://127.0.0.1:8080")
     app.run(host='0.0.0.0', debug=True, port=8080)
