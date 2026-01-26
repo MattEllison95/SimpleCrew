@@ -95,6 +95,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS simplefin_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         access_url TEXT NOT NULL,
+        is_valid INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )''')
 
@@ -186,7 +187,15 @@ def init_db():
     except sqlite3.OperationalError:
         # Column doesn't exist, table is already in new format
         pass
-    
+
+    # Migration: Add is_valid column to simplefin_config if it doesn't exist
+    try:
+        c.execute("SELECT is_valid FROM simplefin_config LIMIT 1")
+    except sqlite3.OperationalError:
+        print("Migrating DB: Adding is_valid column to simplefin_config...")
+        c.execute("ALTER TABLE simplefin_config ADD COLUMN is_valid INTEGER DEFAULT 1")
+        conn.commit()
+
     # Store seen credit card transactions to avoid duplicates
     c.execute('''CREATE TABLE IF NOT EXISTS credit_card_transactions (
         transaction_id TEXT PRIMARY KEY,
@@ -1602,10 +1611,11 @@ def api_credit_card_status():
         c.execute("SELECT account_id, account_name, pocket_id, created_at, provider FROM credit_card_config LIMIT 1")
         row = c.fetchone()
 
-        # Check if SimpleFin access URL exists
-        c.execute("SELECT access_url FROM simplefin_config LIMIT 1")
+        # Check if SimpleFin access URL exists and is valid
+        c.execute("SELECT access_url, is_valid FROM simplefin_config LIMIT 1")
         simplefin_url = c.fetchone()
         has_simplefin_access_url = bool(simplefin_url and simplefin_url[0])
+        simplefin_token_invalid = bool(simplefin_url and simplefin_url[0] and simplefin_url[1] == 0)
 
         conn.close()
 
@@ -1618,7 +1628,8 @@ def api_credit_card_status():
             "pocketId": None,
             "createdAt": None,
             "provider": None,
-            "hasSimplefinAccessUrl": has_simplefin_access_url
+            "hasSimplefinAccessUrl": has_simplefin_access_url,
+            "simplefinTokenInvalid": simplefin_token_invalid
         }
 
         if row:
@@ -2039,7 +2050,14 @@ def check_simplefin_transactions(conn, c, account_id, pocket_id, access_url):
         print(f"📅 Fetching transactions from {start_timestamp} to {end_timestamp}", flush=True)
         response = requests.get(f"{access_url}/accounts", params=params, timeout=60)
         if response.status_code != 200:
-            print(f"❌ SimpleFin API error: {response.status_code} - {response.text}")
+            print(f"❌ SimpleFin API error: {response.status_code} - {response.text}", flush=True)
+
+            # If 403, mark token as invalid in database
+            if response.status_code == 403:
+                print("🚫 SimpleFin token has been revoked or is invalid", flush=True)
+                c.execute("UPDATE simplefin_config SET is_valid = 0")
+                conn.commit()
+
             return
 
         data = response.json()
@@ -2262,13 +2280,13 @@ def store_simplefin_access_url(access_url):
         existing = c.fetchone()
 
         if existing:
-            # Update existing access URL
+            # Update existing access URL and mark as valid
             print("Updating existing SimpleFin access URL", flush=True)
-            c.execute("UPDATE simplefin_config SET access_url = ? WHERE id = ?", (access_url, existing[0]))
+            c.execute("UPDATE simplefin_config SET access_url = ?, is_valid = 1 WHERE id = ?", (access_url, existing[0]))
         else:
-            # Insert new access URL
+            # Insert new access URL (is_valid defaults to 1)
             print("Storing new SimpleFin access URL", flush=True)
-            c.execute("INSERT INTO simplefin_config (access_url) VALUES (?)", (access_url,))
+            c.execute("INSERT INTO simplefin_config (access_url, is_valid) VALUES (?, 1)", (access_url,))
 
         conn.commit()
         rows_affected = c.rowcount
@@ -2317,6 +2335,15 @@ def simplefin_get_accounts(access_url):
         response = requests.get(f"{access_url}/accounts", timeout=30)
 
         if response.status_code != 200:
+            # If 403, mark token as invalid
+            if response.status_code == 403:
+                print("🚫 SimpleFin token has been revoked or is invalid (get_accounts)", flush=True)
+                conn = sqlite3.connect(DB_FILE)
+                c = conn.cursor()
+                c.execute("UPDATE simplefin_config SET is_valid = 0")
+                conn.commit()
+                conn.close()
+
             return {"error": f"SimpleFin API error: {response.status_code} - {response.text}"}
 
         data = response.json()

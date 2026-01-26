@@ -1545,6 +1545,22 @@
 
                                 <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">SimpleFin Setup</h3>
 
+                                <!-- Invalid Token Warning -->
+                                <div id="simplefin-invalid-warning" style="display: none; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                        <div style="font-size: 24px;">⚠️</div>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 600; margin-bottom: 8px; color: #e65100;">SimpleFin Token Invalid or Revoked</div>
+                                            <p style="color: #e65100; line-height: 1.6; margin-bottom: 12px; font-size: 14px;">
+                                                Your SimpleFin access token has been revoked or is no longer valid. This can happen if you deleted the connection from your bank's side or if the token expired.
+                                            </p>
+                                            <button onclick="disconnectSimpleFin()" style="background: #d32f2f; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                                Disconnect SimpleFin
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Token Input -->
                                 <div id="simplefin-token-input" style="background: #f8f9fa; border-radius: 12px; padding: 30px; margin-bottom: 30px; border: 2px dashed #ddd;">
                                     <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark);">Step 1: Enter Your SimpleFin Setup Token</h3>
@@ -1656,6 +1672,22 @@
 
                         <!-- Management Interface (shown when fully configured) -->
                         <div id="credit-management-screen" style="display: none;">
+                            <!-- Invalid Token Warning (for SimpleFin) -->
+                            <div id="credit-management-invalid-warning" style="display: none; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                    <div style="font-size: 24px;">⚠️</div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; margin-bottom: 8px; color: #e65100;">SimpleFin Token Invalid or Revoked</div>
+                                        <p style="color: #e65100; line-height: 1.6; margin-bottom: 12px; font-size: 14px;">
+                                            Your SimpleFin access token has been revoked or is no longer valid. Transactions will not sync until you reconnect.
+                                        </p>
+                                        <button onclick="disconnectSimpleFin()" style="background: #d32f2f; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s; margin-right: 10px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                            Disconnect SimpleFin
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Credit Card Pocket Display with Animation -->
                             <div id="credit-card-pocket-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 40px; margin-bottom: 30px; color: white; position: relative; overflow: hidden;">
                                 <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
@@ -1919,28 +1951,44 @@
                 document.getElementById('lunchflow-setup').style.display = 'none';
                 document.getElementById('simplefin-setup').style.display = 'block';
 
-                // Check if we already have a SimpleFin access URL stored
-                console.log('Checking for stored SimpleFin access URL...');
-                fetch('/api/simplefin/get-access-url')
+                // Check status for token validity
+                fetch('/api/lunchflow/credit-card-status')
                     .then(res => res.json())
-                    .then(data => {
-                        console.log('SimpleFin access URL check result:', data);
-                        if (data.success && data.accessUrl) {
-                            // We already have an access URL - skip token input and load accounts
-                            console.log('✅ Found stored SimpleFin access URL, loading accounts...');
-                            simpleFinAccessUrl = data.accessUrl;
+                    .then(status => {
+                        // Show invalid token warning if needed
+                        if (status.simplefinTokenInvalid) {
+                            document.getElementById('simplefin-invalid-warning').style.display = 'block';
                             document.getElementById('simplefin-token-input').style.display = 'none';
-                            document.getElementById('simplefin-account-selection').style.display = 'block';
-                            loadSimpleFinAccounts();
-                        } else {
-                            // No access URL - show token input
-                            console.log('⚠️ No SimpleFin access URL found, showing token input');
-                            document.getElementById('simplefin-token-input').style.display = 'block';
                             document.getElementById('simplefin-account-selection').style.display = 'none';
+                        } else {
+                            document.getElementById('simplefin-invalid-warning').style.display = 'none';
+
+                            // Check if we already have a SimpleFin access URL stored
+                            console.log('Checking for stored SimpleFin access URL...');
+                            if (status.hasSimplefinAccessUrl) {
+                                // We already have an access URL - fetch it and load accounts
+                                fetch('/api/simplefin/get-access-url')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        console.log('SimpleFin access URL check result:', data);
+                                        if (data.success && data.accessUrl) {
+                                            console.log('✅ Found stored SimpleFin access URL, loading accounts...');
+                                            simpleFinAccessUrl = data.accessUrl;
+                                            document.getElementById('simplefin-token-input').style.display = 'none';
+                                            document.getElementById('simplefin-account-selection').style.display = 'block';
+                                            loadSimpleFinAccounts();
+                                        }
+                                    });
+                            } else {
+                                // No access URL - show token input
+                                console.log('⚠️ No SimpleFin access URL found, showing token input');
+                                document.getElementById('simplefin-token-input').style.display = 'block';
+                                document.getElementById('simplefin-account-selection').style.display = 'none';
+                            }
                         }
                     })
                     .catch(err => {
-                        console.error('❌ Error checking SimpleFin access URL:', err);
+                        console.error('❌ Error checking SimpleFin status:', err);
                         // On error, show token input
                         document.getElementById('simplefin-token-input').style.display = 'block';
                         document.getElementById('simplefin-account-selection').style.display = 'none';
@@ -2324,6 +2372,31 @@
             });
         }
 
+        function disconnectSimpleFin() {
+            if (!confirm('Are you sure you want to disconnect SimpleFin? This will remove all SimpleFin accounts and return any pocket funds to your Checking account.')) {
+                return;
+            }
+
+            fetch('/api/simplefin/disconnect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    appAlert(data.message || 'SimpleFin disconnected successfully', 'Success');
+                    // Refresh the page to show clean state
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    appAlert(data.error || 'Failed to disconnect SimpleFin', 'Error');
+                }
+            })
+            .catch(err => {
+                console.error('Error disconnecting SimpleFin:', err);
+                appAlert('Error: ' + err.message, 'Error');
+            });
+        }
+
         function handleBalanceSync(syncBalance) {
             const modal = document.getElementById('balance-sync-modal');
             modal.style.display = 'none';
@@ -2379,6 +2452,13 @@
         let creditCardRefreshInterval = null;
 
         function loadCreditManagement(status) {
+            // Show/hide invalid token warning for SimpleFin
+            if (status.provider === 'simplefin' && status.simplefinTokenInvalid) {
+                document.getElementById('credit-management-invalid-warning').style.display = 'block';
+            } else {
+                document.getElementById('credit-management-invalid-warning').style.display = 'none';
+            }
+
             // Update account info
             document.getElementById('mgmt-account-name').textContent = status.accountName || 'Unknown';
             document.getElementById('mgmt-account-id').textContent = status.accountId || 'N/A';
