@@ -1309,10 +1309,17 @@ def api_transactions():
     max_date = request.args.get('maxDate')
     min_amt = request.args.get('minAmt')
     max_amt = request.args.get('maxAmt')
-    
+
     # Get regular transactions
-    result = get_transactions_data(q, min_date, max_date, min_amt, max_amt)
-    
+    cached_result = get_transactions_data(q, min_date, max_date, min_amt, max_amt)
+
+    # Create a new result dict to avoid mutating cached data
+    result = {
+        "transactions": list(cached_result.get("transactions", [])),  # Create a copy of the list
+        "balance": cached_result.get("balance"),
+        "allTransactions": cached_result.get("allTransactions", [])
+    }
+
     # Get credit card transactions
     try:
         conn = sqlite3.connect(DB_FILE)
@@ -1322,12 +1329,12 @@ def api_transactions():
                      ORDER BY date DESC, created_at DESC""")
         rows = c.fetchall()
         conn.close()
-        
+
         credit_card_txs = []
         for row in rows:
             tx_date = row[2]  # date field
             amount = row[1]  # amount (already in dollars)
-            
+
             # Apply filters if provided
             if min_date and tx_date < min_date:
                 continue
@@ -1339,7 +1346,7 @@ def api_transactions():
                 continue
             if q and q.lower() not in (row[3] or "").lower() and q.lower() not in (row[4] or "").lower():
                 continue
-            
+
             # Format as Crew transaction format
             credit_card_txs.append({
                 "id": f"cc_{row[0]}",  # Prefix to avoid conflicts
@@ -1353,17 +1360,19 @@ def api_transactions():
                 "merchant": row[3],
                 "isPending": bool(row[5])
             })
-        
+
         # Merge and sort by date
-        if "transactions" in result:
+        if result["transactions"]:
             all_txs = result["transactions"] + credit_card_txs
             # Handle None dates by treating them as empty strings for sorting
             all_txs.sort(key=lambda x: x.get("date") or "", reverse=True)
             result["transactions"] = all_txs
-    
+        elif credit_card_txs:
+            result["transactions"] = credit_card_txs
+
     except Exception as e:
         print(f"Error loading credit card transactions: {e}")
-    
+
     return jsonify(result)
 @app.route('/api/transaction/<path:tx_id>')
 def api_transaction_detail(tx_id): return jsonify(get_transaction_detail(tx_id))
