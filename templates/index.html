@@ -1414,10 +1414,15 @@
             <div id="view-goals" class="view-section">
                 <div class="section-header-row">
                     <span class="tab-title">Pockets</span>
-                    <button class="btn-manage-groups" onclick="openGroupMgmt()">
-                        <span>Manage Groups</span>
-                        <span class="icon-gear">⚙️</span>
-                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-manage-groups" onclick="toggleCreditCardPocketsVisibility()" id="toggle-cc-pockets-btn" style="padding: 8px 12px;">
+                            <span id="cc-pockets-toggle-text">💳 Show CC</span>
+                        </button>
+                        <button class="btn-manage-groups" onclick="openGroupMgmt()">
+                            <span>Manage Groups</span>
+                            <span class="icon-gear">⚙️</span>
+                        </button>
+                    </div>
                 </div>
                 <div id="goals-list" class="data-container"><div style="text-align:center; padding:20px; color:#999;">Loading goals...</div></div>
             </div>
@@ -1745,6 +1750,7 @@
         let expensesDataStore = [];
         let moveMoneyAccounts = [];
         let currentFundingSource = "Checking";
+        let showCreditCardPockets = localStorage.getItem('showCreditCardPockets') === 'true';
 
         // --- PWA REGISTRATION ---
         if ('serviceWorker' in navigator) {
@@ -3211,6 +3217,22 @@
             });
         }
         
+        // --- CREDIT CARD POCKETS VISIBILITY TOGGLE ---
+        function toggleCreditCardPocketsVisibility() {
+            showCreditCardPockets = !showCreditCardPockets;
+            localStorage.setItem('showCreditCardPockets', showCreditCardPockets);
+            updateCreditCardToggleButton();
+            loadGoals(); // Reload pockets view
+            loadSidebarGoals(); // Reload sidebar
+        }
+
+        function updateCreditCardToggleButton() {
+            const btn = document.getElementById('cc-pockets-toggle-text');
+            if (btn) {
+                btn.textContent = showCreditCardPockets ? '💳 Hide CC' : '💳 Show CC';
+            }
+        }
+
         // --- GOALS (Updated with Grouping and DnD) ---
         function loadGoals(forceRefresh = false) {
             const url = forceRefresh ? '/api/goals?refresh=true' : '/api/goals';
@@ -3234,8 +3256,8 @@
                     groups[g.id] = { id: g.id, name: g.name, pockets: [], totalBalance: 0, totalTarget: 0 };
                 });
 
-                // Filter out credit card pockets (they'll be shown on credit page)
-                const regularGoals = data.goals.filter(g => !g.isCreditCard);
+                // Filter out credit card pockets unless toggle is on
+                const regularGoals = showCreditCardPockets ? data.goals : data.goals.filter(g => !g.isCreditCard);
                 
                 regularGoals.forEach((g, index) => {
                     // Attach original index for onClick handlers (using original goals array for indexing)
@@ -3316,15 +3338,17 @@
         function renderGoalItem(g, index) {
             let pct = g.target > 0 ? Math.min((g.balance / g.target) * 100, 100) : 0;
             const hasGoal = g.target > 0;
+
+            // Check if this is a credit card pocket
+            const isCreditCard = g.isCreditCard === true;
+            const amountLabel = isCreditCard ? 'set aside' : 'saved';
+
             const progressHtml = hasGoal
                 ? `<div class="exp-progress-container"><div class="exp-progress-bar" style="width: ${pct}%"></div></div>`
                 : '';
             const detailsText = hasGoal
-                ? `<span>${fmt(g.balance)} of ${fmt(g.target)} saved</span>`
-                : `<span>${fmt(g.balance)} saved</span>`;
-
-            // Check if this is a credit card pocket
-            const isCreditCard = g.isCreditCard === true;
+                ? `<span>${fmt(g.balance)} of ${fmt(g.target)} ${amountLabel}</span>`
+                : `<span>${fmt(g.balance)} ${amountLabel}</span>`;
             const creditCardIcon = isCreditCard ? '<span style="font-size: 18px; margin-right: 8px; vertical-align: middle;">💳</span>' : '';
 
             // ADDED: draggable="true", ondragstart, data-pocket-id, touch events
@@ -3736,17 +3760,20 @@
                 }
 
                 let html = '';
-                // Filter out credit card pockets from sidebar (they're shown on credit page)
-                const regularGoals = data.goals.filter(g => !g.isCreditCard);
-                
+                // Filter out credit card pockets from sidebar unless toggle is on
+                const regularGoals = showCreditCardPockets ? data.goals : data.goals.filter(g => !g.isCreditCard);
+
                 regularGoals.forEach((g, index) => {
                     let pct = g.target > 0 ? Math.min((g.balance / g.target) * 100, 100) : 0;
                     const hasGoal = g.target > 0;
-                    
+
                     // Sidebar specific logic for no-goal pockets
+                    const isCreditCard = g.isCreditCard === true;
+                    const amountLabel = isCreditCard ? 'Set Aside' : 'Saved';
+
                     const detailsText = hasGoal
                         ? `<span>${fmt(g.balance)}</span><span>of ${fmt(g.target)}</span>`
-                        : `<span>${fmt(g.balance)}</span><span>Saved</span>`;
+                        : `<span>${fmt(g.balance)}</span><span>${amountLabel}</span>`;
                     
                     const barHtml = hasGoal
                         ? `<div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%"></div></div>`
@@ -3870,15 +3897,17 @@
         }
         
         // --- UPDATED GOAL DETAIL (Pockets) with Group Assignment ---
-        function openGoalDetailList(index) { 
+        function openGoalDetailList(index) {
             const g = goalsDataStore[index];
-            const modal = document.getElementById('tx-modal'); 
-            modal.style.display = 'flex'; 
-            document.getElementById('modal-title-text').innerText = "Pocket Activity"; 
+            const modal = document.getElementById('tx-modal');
+            modal.style.display = 'flex';
+            document.getElementById('modal-title-text').innerText = "Pocket Activity";
             const body = document.getElementById('modal-body-content');
-            
+
             // Set initial layout while loading
-            const targetText = g.target > 0 ? `Saved of ${fmt(g.target)}` : 'Total Saved';
+            const isCreditCard = g.isCreditCard === true;
+            const amountLabel = isCreditCard ? 'Set Aside' : 'Saved';
+            const targetText = g.target > 0 ? `${amountLabel} of ${fmt(g.target)}` : `Total ${amountLabel}`;
             
             // Pre-fill group logic if needed (though we manage via the main button now, keeping this doesn't hurt)
             // But per your request, the management button is the primary way now.
@@ -4410,7 +4439,7 @@ function savePocket() {
 
 
         // Start with forced refresh on pockets to ensure sidebar is accurate
-        initBalances(); reloadTx(); loadTrends(); loadSidebarPockets(true); loadUserProfile(); loadIntercom(); loadCards(true);
+        initBalances(); reloadTx(); loadTrends(); loadSidebarPockets(true); loadUserProfile(); loadIntercom(); loadCards(true); updateCreditCardToggleButton();
 
     </script>
     <!-- Custom App Dialog -->
