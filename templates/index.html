@@ -3352,12 +3352,13 @@
             const creditCardIcon = isCreditCard ? '<span style="font-size: 18px; margin-right: 8px; vertical-align: middle;">💳</span>' : '';
 
             // ADDED: draggable="true", ondragstart, data-pocket-id, touch events
-            return `<div class="exp-item draggable-item ${isCreditCard ? 'credit-card-pocket' : ''}" 
-                        draggable="true" 
+            return `<div class="exp-item draggable-item ${isCreditCard ? 'credit-card-pocket' : ''}"
+                        draggable="true"
                         ondragstart="drag(event)"
                         ontouchstart="handleTouchStart(event)"
                         ontouchmove="handleTouchMove(event)"
                         ontouchend="handleTouchEnd(event)"
+                        ontouchcancel="handleTouchCancel(event)"
                         data-pocket-id="${g.id}"
                         onclick="openGoalDetailList(${index})">
                         <div class="exp-header-line">
@@ -3370,47 +3371,72 @@
         }
         
         // --- DRAG AND DROP HANDLERS ---
-        
+
         let draggedItem = null;
         let touchStartY = 0;
         let touchStartX = 0;
+        let isDragging = false;
+        let longPressTimer = null;
 
         function drag(ev) {
             draggedItem = ev.target;
             // Set data
             ev.dataTransfer.setData("pocketId", ev.target.getAttribute('data-pocket-id'));
             ev.dataTransfer.effectAllowed = 'move';
-            
+
             // Visual timeout to allow the drag image to be generated before hiding the element
             setTimeout(() => ev.target.classList.add('is-dragging'), 0);
         }
 
-        // Mobile touch handlers
+        // Mobile touch handlers with better scroll detection
         function handleTouchStart(ev) {
             const touch = ev.touches[0];
             touchStartY = touch.clientY;
             touchStartX = touch.clientX;
-            draggedItem = ev.target.closest('.draggable-item');
-            if (draggedItem) {
-                ev.preventDefault();
-                draggedItem.classList.add('is-dragging');
+            isDragging = false;
+
+            const targetItem = ev.target.closest('.draggable-item');
+            if (targetItem) {
+                // Start a timer - only activate drag mode after 500ms hold
+                longPressTimer = setTimeout(() => {
+                    isDragging = true;
+                    draggedItem = targetItem;
+                    draggedItem.classList.add('is-dragging');
+                    // Haptic feedback if available
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }, 500);
             }
         }
 
         function handleTouchMove(ev) {
-            if (!draggedItem) return;
-            ev.preventDefault();
-            
             const touch = ev.touches[0];
+            const deltaY = Math.abs(touch.clientY - touchStartY);
+            const deltaX = Math.abs(touch.clientX - touchStartX);
+
+            // If user moved significantly before long press activated, cancel drag mode (they're scrolling)
+            if (!isDragging && (deltaY > 10 || deltaX > 10)) {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                return;
+            }
+
+            // If drag mode is active, prevent scrolling and handle drag
+            if (!isDragging || !draggedItem) return;
+            ev.preventDefault();
+
             const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
             const zone = elementBelow?.closest('.group-drop-zone') || elementBelow?.closest('#goals-list');
-            
+
             // Clear all active states
             document.querySelectorAll('.drag-active').forEach(el => el.classList.remove('drag-active'));
-            
+
             if (zone) {
                 zone.classList.add('drag-active');
-                
+
                 let listContainer;
                 if (zone.id === 'goals-list') {
                     listContainer = zone;
@@ -3421,7 +3447,7 @@
                         zone.querySelector('.group-header')?.classList.remove('collapsed');
                     }
                 }
-                
+
                 if (listContainer) {
                     const afterElement = getDragAfterElement(listContainer, touch.clientY);
                     if (afterElement == null) {
@@ -3434,7 +3460,18 @@
         }
 
         function handleTouchEnd(ev) {
-            if (!draggedItem) return;
+            // Clear long press timer if it's still pending
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+
+            if (!isDragging || !draggedItem) {
+                isDragging = false;
+                draggedItem = null;
+                return;
+            }
+
             ev.preventDefault();
             
             const touch = ev.changedTouches[0];
@@ -3463,8 +3500,23 @@
                     savePocketOrder(groupId, childPocketIds);
                 }
             }
-            
+
             draggedItem = null;
+            isDragging = false;
+        }
+
+        function handleTouchCancel(ev) {
+            // Clean up if touch is interrupted
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            if (draggedItem) {
+                draggedItem.classList.remove('is-dragging');
+            }
+            document.querySelectorAll('.drag-active').forEach(el => el.classList.remove('drag-active'));
+            draggedItem = null;
+            isDragging = false;
         }
 
         function allowDrop(ev) {
